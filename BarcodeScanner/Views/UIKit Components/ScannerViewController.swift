@@ -8,14 +8,14 @@
 import UIKit
 import AVFoundation
 
-enum CameraError : String {
-    case invalidDeviceInput     = "Something is wrong with camera. We are unable to capture the input."
-    case invalidScannedValue    = "Tthe value scanned is not valid. This app scans EAN-8 and EAN-13."
+enum CameraError {
+    case invalidDeviceInput
+    case invalidScannedValue
 }
 
 protocol ScannerVCDelegate : AnyObject {
     func didFind(barcode : String)
-    func didSurface(error : CameraError)
+    func didSurface(error : AlertItem)
 }
 
 final class ScannerViewController : UIViewController {
@@ -32,7 +32,7 @@ final class ScannerViewController : UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         guard let previewLayer else {
-            scannerDelegate?.didSurface(error: .invalidDeviceInput)
+            scannerDelegate?.didSurface(error: AlertContext.invalidDeviceInput)
             return
         }
         previewLayer.frame = view.layer.bounds
@@ -47,7 +47,7 @@ final class ScannerViewController : UIViewController {
     
     private func setupCaptureSessions() {
         guard let videoCaptureDevice = AVCaptureDevice.default(for: .video) else {
-            scannerDelegate?.didSurface(error: .invalidDeviceInput)
+            scannerDelegate?.didSurface(error: AlertContext.invalidDeviceInput)
             return
         }
         let videoInput : AVCaptureDeviceInput
@@ -55,14 +55,14 @@ final class ScannerViewController : UIViewController {
         do {
             try videoInput = AVCaptureDeviceInput(device: videoCaptureDevice)
         }catch {
-            scannerDelegate?.didSurface(error: .invalidDeviceInput)
+            scannerDelegate?.didSurface(error: AlertContext.invalidDeviceInput)
             return
         }
         
         if captureSession.canAddInput(videoInput) {
             captureSession.addInput(videoInput)
         }else {
-            scannerDelegate?.didSurface(error: .invalidDeviceInput)
+            scannerDelegate?.didSurface(error: AlertContext.invalidDeviceInput)
             return
         }
         
@@ -73,7 +73,7 @@ final class ScannerViewController : UIViewController {
             metaDataOutput.setMetadataObjectsDelegate(self, queue: .main)
             metaDataOutput.metadataObjectTypes = [.ean8,.ean13]
         }else {
-            scannerDelegate?.didSurface(error: .invalidDeviceInput)
+            scannerDelegate?.didSurface(error: AlertContext.invalidDeviceInput)
             return
         }
         
@@ -92,15 +92,15 @@ final class ScannerViewController : UIViewController {
 extension ScannerViewController : AVCaptureMetadataOutputObjectsDelegate {
     func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
         guard let object = metadataObjects.first else {
-            scannerDelegate?.didSurface(error: .invalidScannedValue)
+            scannerDelegate?.didSurface(error: AlertContext.invalidScannedType)
             return
         }
         guard let machineReadableObject = object as? AVMetadataMachineReadableCodeObject else {
-            scannerDelegate?.didSurface(error: .invalidScannedValue)
+            scannerDelegate?.didSurface(error: AlertContext.invalidScannedType)
             return
         }
         guard let barcode = machineReadableObject.stringValue else {
-            scannerDelegate?.didSurface(error: .invalidScannedValue)
+            scannerDelegate?.didSurface(error: AlertContext.invalidScannedType)
             return
         }
         scannerDelegate?.didFind(barcode: barcode)
